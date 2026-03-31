@@ -3,14 +3,21 @@ from flask_cors import CORS
 from pymongo import MongoClient
 from werkzeug.security import generate_password_hash, check_password_hash
 
+
 app = Flask(__name__)
 CORS(app)
 
-# Replace with your Atlas connection string
-MONGO_URI = "mongodb+srv://skillfutureai_db_user:skillFuture%40ai@cluster0.rxmlpct.mongodb.net/skillfutureai?retryWrites=true&w=majority"
-client = MongoClient(MONGO_URI)
-db = client['skillfutureai']
-users_col = db['users']
+try:
+    client = MongoClient("mongodb://localhost:27017/", serverSelectionTimeoutMS=5000)
+    client.admin.command('ismaster')
+    print("MongoDB connected successfully")
+except Exception as e:
+    print(f"MongoDB connection failed: {e}")
+    # Note: Start MongoDB service with 'net start MongoDB'
+    raise
+db = client["skillfuture"]
+users_col = db["users"]
+
 @app.route('/signup', methods=['POST'])
 def signup():
     data = request.json
@@ -37,5 +44,38 @@ def login():
 
     return jsonify({"message": "Login successful", "email": email})
 
+@app.route('/onboarding', methods=['POST'])
+def onboarding():
+    data = request.json
+
+    skills_list = [s.strip() for s in data.get("skills", "").split(",")]
+
+    user_data = {
+        "name": data.get("name"),
+        "college": data.get("college"),
+        "degree": data.get("degree"),
+        "year": data.get("year"),
+        "skills": skills_list,
+        "experience_level": data.get("experience_level"),
+        "projects": data.get("projects"),
+        "domain_interest": data.get("domain"),
+        "goal": data.get("goal"),
+        "github": data.get("github"),
+        "linkedin": data.get("linkedin"),
+        "self_rating": {
+            "coding": int(data.get("coding", 1)),
+            "debugging": int(data.get("debugging", 1)),
+            "problem_solving": int(data.get("problem_solving", 1))
+        },
+        "learning_style": data.get("learning_style"),
+        "daily_hours": data.get("daily_hours")
+    }
+
+    # FIX: Changed 'collection' to 'users_col'
+    users_col.insert_one(user_data) 
+
+    return jsonify({"message": "Profile saved successfully 🚀"})
+
 if __name__ == '__main__':
+    # Running on default port 5000
     app.run(debug=True)

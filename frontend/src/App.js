@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import styled from "styled-components";
+import Onboarding from "./Onboarding";
 
 const Container = styled.div`
   display: flex;
@@ -48,18 +49,33 @@ function App() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLogin, setIsLogin] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false); // Track login status
 
   const handleSubmit = async () => {
     const endpoint = isLogin ? "/login" : "/signup";
-    const res = await fetch(`http://127.0.0.1:5000${endpoint}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
+    try {
+      const res = await fetch(`http://127.0.0.1:5000${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
 
-    const data = await res.json();
-    alert(data.message);
+      const data = await res.json();
+      
+      if (res.ok) {
+        setIsLoggedIn(true); // User successfully authenticated
+      } else {
+        alert(data.message || "Something went wrong");
+      }
+    } catch (error) {
+      alert("Error connecting to server");
+    }
   };
+
+  // Conditional Rendering: Show Onboarding if logged in, otherwise show Auth form
+  if (isLoggedIn) {
+    return <Onboarding />;
+  }
 
   return (
     <Container>
