@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import "./Onboarding.css";
 
-function Onboarding() {
+// Added { userEmail, onComplete } as props
+function Onboarding({ userEmail, onComplete }) {
   const [formData, setFormData] = useState({
+    email: userEmail, // Ensure email is part of the form data
     name: "",
     college: "",
     year: "",
@@ -29,21 +31,34 @@ function Onboarding() {
   };
 
   const handleSubmit = async () => {
-    const res = await fetch("http://127.0.0.1:5000/onboarding", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(formData)
-    });
+    try {
+      const res = await fetch("http://127.0.0.1:5000/onboarding", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(formData)
+      });
 
-    const data = await res.json();
-    alert(data.message);
+      const data = await res.json();
+      
+      if (res.ok) {
+        alert(data.message);
+        // This is the trigger that tells App.js to switch to the Assessment page
+        onComplete(); 
+      } else {
+        alert("Failed to save profile: " + data.message);
+      }
+    } catch (error) {
+      console.error("Error during onboarding:", error);
+      alert("Error connecting to server");
+    }
   };
 
   return (
     <div className="container">
       <h1>🚀 SkillFutureAI Onboarding</h1>
+      <p style={{ textAlign: "center", color: "#eee" }}>Setting up profile for: {userEmail}</p>
 
       <div className="card">
 
