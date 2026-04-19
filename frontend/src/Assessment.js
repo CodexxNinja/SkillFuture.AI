@@ -1,21 +1,10 @@
 import { useEffect, useState } from "react";
 import styled, { keyframes } from "styled-components";
-import Dashboard from "./Dashboard";
 
 // --- ANIMATIONS ---
 const fadeIn = keyframes`
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
-`;
-
-const shimmer = keyframes`
-  0% { background-position: -200% center; }
-  100% { background-position: 200% center; }
-`;
-
-const progressFill = keyframes`
-  from { width: 0%; }
-  to { width: var(--target-width); }
 `;
 
 const pulse = keyframes`
@@ -46,7 +35,6 @@ const AssessmentCard = styled.div`
   box-shadow: 0 32px 64px rgba(0, 0, 0, 0.5);
 `;
 
-// --- HEADER ---
 const Header = styled.div`
   padding: 28px 32px 24px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
@@ -77,6 +65,19 @@ const Subtitle = styled.p`
   color: #52525b;
 `;
 
+const DomainTag = styled.div`
+  background: rgba(96, 165, 250, 0.1);
+  border: 1px solid rgba(96, 165, 250, 0.25);
+  color: #93c5fd;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.68rem;
+  padding: 4px 10px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+`;
+
 const Badge = styled.div`
   background: rgba(16, 185, 129, 0.1);
   border: 1px solid rgba(16, 185, 129, 0.2);
@@ -88,18 +89,15 @@ const Badge = styled.div`
   display: flex;
   align-items: center;
   gap: 6px;
-
   &::before {
     content: '';
-    width: 6px;
-    height: 6px;
+    width: 6px; height: 6px;
     background: #10b981;
     border-radius: 50%;
     animation: ${pulse} 2s infinite;
   }
 `;
 
-// --- PROGRESS ---
 const ProgressBar = styled.div`
   height: 3px;
   background: #1c1c1f;
@@ -124,12 +122,10 @@ const ProgressMeta = styled.div`
   color: #52525b;
 `;
 
-// --- BODY ---
 const Body = styled.div`
   padding: 28px 32px;
 `;
 
-// --- QUESTION ---
 const QuestionBlock = styled.div`
   margin-bottom: 20px;
   padding: 20px;
@@ -158,6 +154,15 @@ const QuestionNumber = styled.span`
   border-radius: 4px;
 `;
 
+const LockedBadge = styled.span`
+  font-family: 'Fira Code', monospace;
+  font-size: 0.62rem;
+  color: #52525b;
+  background: #18181b;
+  padding: 2px 7px;
+  border-radius: 4px;
+`;
+
 const QuestionText = styled.p`
   font-family: 'Inter', sans-serif;
   font-size: 0.95rem;
@@ -166,16 +171,12 @@ const QuestionText = styled.p`
   line-height: 1.5;
 `;
 
-// --- OPTIONS ---
 const OptionsGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
   margin-top: 14px;
-
-  @media (max-width: 500px) {
-    grid-template-columns: 1fr;
-  }
+  @media (max-width: 500px) { grid-template-columns: 1fr; }
 `;
 
 const OptionLabel = styled.label`
@@ -196,28 +197,25 @@ const OptionLabel = styled.label`
     'rgba(255,255,255,0.05)'
   };
   border-radius: 8px;
-  cursor: pointer;
+  cursor: ${props => props.locked ? 'default' : 'pointer'};
   transition: all 0.2s ease;
-
+  opacity: ${props => props.locked && !props.correct && !props.selected ? 0.5 : 1};
   &:hover {
-    border-color: rgba(16, 185, 129, 0.3);
-    background: rgba(16, 185, 129, 0.05);
+    border-color: ${props => props.locked ? 'inherit' : 'rgba(16, 185, 129, 0.3)'};
+    background: ${props => props.locked ? 'inherit' : 'rgba(16, 185, 129, 0.05)'};
   }
-
   input[type="radio"] {
     appearance: none;
-    width: 14px;
-    height: 14px;
+    width: 14px; height: 14px;
     border: 1.5px solid #3f3f46;
     border-radius: 50%;
     flex-shrink: 0;
     transition: all 0.2s ease;
-    position: relative;
-
+    cursor: ${props => props.locked ? 'default' : 'pointer'};
     &:checked {
-      border-color: #10b981;
-      background: #10b981;
-      box-shadow: 0 0 0 3px rgba(16,185,129,0.2);
+      border-color: ${props => props.wrong ? '#ef4444' : '#10b981'};
+      background: ${props => props.wrong ? '#ef4444' : '#10b981'};
+      box-shadow: 0 0 0 3px ${props => props.wrong ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.2)'};
     }
   }
 `;
@@ -229,7 +227,6 @@ const OptionText = styled.span`
   font-weight: ${props => (props.correct || props.wrong) ? '500' : '400'};
 `;
 
-// --- FEEDBACK ---
 const FeedbackBox = styled.div`
   margin-top: 14px;
   padding: 12px 14px;
@@ -254,7 +251,6 @@ const FeedbackText = styled.p`
   line-height: 1.5;
 `;
 
-// --- FOOTER ---
 const Footer = styled.div`
   padding: 20px 32px 28px;
   border-top: 1px solid rgba(255,255,255,0.06);
@@ -285,14 +281,9 @@ const SubmitButton = styled.button`
   display: flex;
   align-items: center;
   gap: 8px;
-
-  &:hover:not(:disabled) {
-    background: #e4e4e7;
-    transform: translateY(-1px);
-  }
+  &:hover:not(:disabled) { background: #e4e4e7; transform: translateY(-1px); }
 `;
 
-// --- LOADING ---
 const LoadingState = styled.div`
   padding: 60px 32px;
   text-align: center;
@@ -303,10 +294,8 @@ const LoadingDots = styled.div`
   justify-content: center;
   gap: 6px;
   margin-bottom: 16px;
-
   span {
-    width: 8px;
-    height: 8px;
+    width: 8px; height: 8px;
     background: #10b981;
     border-radius: 50%;
     animation: ${pulse} 1.2s infinite;
@@ -321,23 +310,30 @@ const LoadingText = styled.p`
   color: #52525b;
 `;
 
-// --- COMPONENT ---
-function Assessment({ userEmail }) {
+// ─────────────────────────────────────────────────────────────────
+// COMPONENT
+// ─────────────────────────────────────────────────────────────────
+function Assessment({ userEmail, domain, onComplete }) {
   const [questions, setQuestions] = useState([]);
-  const [answers, setAnswers] = useState({});
-  const [result, setResult] = useState(null);
+  const [answers, setAnswers] = useState({});   // locked — only set once per question
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
+  const normalizedDomain = domain || "Backend Development";
+
   useEffect(() => {
-    fetch("http://127.0.0.1:5000/get_questions")
+    fetch(`http://127.0.0.1:5000/get_questions?domain=${encodeURIComponent(normalizedDomain)}`)
       .then(res => res.json())
       .then(data => { setQuestions(data); setLoading(false); })
       .catch(() => setLoading(false));
-  }, []);
+  }, [normalizedDomain]);
 
+  // Only set answer if not already answered (lock after first selection)
   const handleChange = (id, value) => {
-    setAnswers(prev => ({ ...prev, [id]: value }));
+    setAnswers(prev => {
+      if (prev[id] !== undefined) return prev; // already locked
+      return { ...prev, [id]: value };
+    });
   };
 
   const handleSubmit = async () => {
@@ -346,18 +342,23 @@ function Assessment({ userEmail }) {
       const res = await fetch("http://127.0.0.1:5000/submit-assessment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: userEmail, answers }),
+        body: JSON.stringify({
+          email: userEmail,
+          answers,
+          domain: normalizedDomain
+        }),
       });
-      const data = await res.json();
-      setResult(data);
+      if (res.ok) {
+        onComplete();
+      } else {
+        alert("Error submitting assessment.");
+      }
     } catch {
-      alert("Error submitting assessment.");
+      alert("Error submitting assessment. Is the backend running?");
     } finally {
       setSubmitting(false);
     }
   };
-
-  if (result) return <Dashboard data={result} />;
 
   const answeredCount = Object.keys(answers).length;
   const percent = questions.length ? Math.round((answeredCount / questions.length) * 100) : 0;
@@ -372,7 +373,10 @@ function Assessment({ userEmail }) {
               <Title>Skill Assessment</Title>
               <Subtitle>user: {userEmail}</Subtitle>
             </TitleGroup>
-            <Badge>LIVE</Badge>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <DomainTag>{normalizedDomain}</DomainTag>
+              <Badge>LIVE</Badge>
+            </div>
           </HeaderTop>
           <ProgressBar>
             <ProgressFill percent={percent} />
@@ -386,79 +390,60 @@ function Assessment({ userEmail }) {
         <Body>
           {loading ? (
             <LoadingState>
-              <LoadingDots>
-                <span /><span /><span />
-              </LoadingDots>
-              <LoadingText>Fetching assessment matrix...</LoadingText>
+              <LoadingDots><span /><span /><span /></LoadingDots>
+              <LoadingText>Loading {normalizedDomain} questions...</LoadingText>
             </LoadingState>
           ) : (
             questions.map((q, index) => {
-              const isAnswered = !!answers[q.id];
-              const isCorrect = answers[q.id] === q.answer;
+              const isAnswered = answers[q.id] !== undefined;
+              const selectedAnswer = answers[q.id];
+              const isCorrect = selectedAnswer === q.answer;
 
               return (
                 <QuestionBlock key={q.id} answered={isAnswered} index={index}>
                   <QuestionMeta>
                     <QuestionNumber>Q{q.id}</QuestionNumber>
+                    {isAnswered && <LockedBadge>locked</LockedBadge>}
                   </QuestionMeta>
                   <QuestionText>{q.question}</QuestionText>
 
-                  {q.type === "mcq" ? (
-                    <>
-                      <OptionsGrid>
-                        {q.options.map((opt) => {
-                          const isSelected = answers[q.id] === opt;
-                          const showCorrect = isAnswered && opt === q.answer;
-                          const showWrong = isAnswered && isSelected && !isCorrect;
-                          return (
-                            <OptionLabel
-                              key={opt}
-                              correct={showCorrect}
-                              wrong={showWrong}
-                              selected={isSelected}
-                            >
-                              <input
-                                type="radio"
-                                name={`q-${q.id}`}
-                                value={opt}
-                                checked={isSelected}
-                                onChange={() => handleChange(q.id, opt)}
-                              />
-                              <OptionText correct={showCorrect} wrong={showWrong}>
-                                {opt}
-                              </OptionText>
-                            </OptionLabel>
-                          );
-                        })}
-                      </OptionsGrid>
+                  <OptionsGrid>
+                    {q.options.map((opt) => {
+                      const isSelected = selectedAnswer === opt;
+                      const showCorrect = isAnswered && opt === q.answer;
+                      const showWrong = isAnswered && isSelected && !isCorrect;
+                      return (
+                        <OptionLabel
+                          key={opt}
+                          correct={showCorrect}
+                          wrong={showWrong}
+                          selected={isSelected}
+                          locked={isAnswered}
+                          onClick={() => !isAnswered && handleChange(q.id, opt)}
+                        >
+                          <input
+                            type="radio"
+                            name={`q-${q.id}`}
+                            value={opt}
+                            checked={isSelected}
+                            onChange={() => {}}
+                            disabled={isAnswered}
+                          />
+                          <OptionText correct={showCorrect} wrong={showWrong}>
+                            {opt}
+                          </OptionText>
+                        </OptionLabel>
+                      );
+                    })}
+                  </OptionsGrid>
 
-                      {isAnswered && (
-                        <FeedbackBox correct={isCorrect}>
-                          <FeedbackIcon>{isCorrect ? "✓" : "✗"}</FeedbackIcon>
-                          <FeedbackText correct={isCorrect}>
-                            <strong>{isCorrect ? "Correct." : "Incorrect."}</strong> {q.explanation}
-                          </FeedbackText>
-                        </FeedbackBox>
-                      )}
-                    </>
-                  ) : (
-                    <input
-                      type="text"
-                      placeholder="Type your answer..."
-                      style={{
-                        marginTop: '12px',
-                        width: '100%',
-                        padding: '10px 14px',
-                        background: '#18181b',
-                        border: '1px solid #27272a',
-                        borderRadius: '8px',
-                        color: '#fafafa',
-                        fontFamily: 'Fira Code, monospace',
-                        fontSize: '0.85rem',
-                        outline: 'none',
-                      }}
-                      onChange={(e) => handleChange(q.id, e.target.value)}
-                    />
+                  {isAnswered && (
+                    <FeedbackBox correct={isCorrect}>
+                      <FeedbackIcon>{isCorrect ? "✓" : "✗"}</FeedbackIcon>
+                      <FeedbackText correct={isCorrect}>
+                        <strong>{isCorrect ? "Correct." : "Incorrect."}</strong> {q.explanation}
+                      </FeedbackText>
+                    </FeedbackBox>
                   )}
                 </QuestionBlock>
               );
@@ -469,6 +454,7 @@ function Assessment({ userEmail }) {
         <Footer>
           <AnsweredCount>
             <span>{answeredCount}</span> of {questions.length} questions answered
+            {allAnswered && <span style={{ color: '#52525b', marginLeft: '8px' }}>· ready to submit</span>}
           </AnsweredCount>
           <SubmitButton
             onClick={handleSubmit}

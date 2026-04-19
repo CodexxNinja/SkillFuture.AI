@@ -2,9 +2,10 @@ import { useState } from "react";
 import styled, { keyframes } from "styled-components";
 import "./App.css";
 import Assessment from "./Assessment";
+import Dashboard from "./Dashboard";
 import Onboarding from "./Onboarding";
 
-// --- ULTRA PREMIUM ANIMATIONS ---
+// --- ANIMATIONS ---
 const fadeIn = keyframes`
   from { opacity: 0; transform: translateY(15px); }
   to { opacity: 1; transform: translateY(0); }
@@ -22,7 +23,6 @@ const glowPulse = keyframes`
 `;
 
 // --- STYLED COMPONENTS ---
-
 const PageWrapper = styled.div`
   display: flex;
   min-height: 100vh;
@@ -30,7 +30,6 @@ const PageWrapper = styled.div`
   z-index: 1;
 `;
 
-// --- LEFT PANEL (AUTH) ---
 const AuthSection = styled.div`
   flex: 1;
   display: flex;
@@ -66,7 +65,6 @@ const LogoIcon = styled.div`
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-  
   &::after {
     content: '';
     width: 12px;
@@ -120,9 +118,7 @@ const Input = styled.input`
   color: #fff;
   font-size: 0.95rem;
   transition: all 0.2s ease;
-
   &::placeholder { color: #52525b; }
-
   &:focus {
     outline: none;
     border-color: #10B981;
@@ -147,9 +143,9 @@ const PrimaryButton = styled.button`
   align-items: center;
   justify-content: center;
   gap: 8px;
-
   &:hover { background: #e4e4e7; transform: translateY(-1px); }
   &:active { transform: translateY(0); }
+  &:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 `;
 
 const ErrorBanner = styled.div`
@@ -169,7 +165,6 @@ const ToggleText = styled.div`
   text-align: center;
   font-size: 0.9rem;
   color: #a1a1aa;
-
   span {
     color: #10B981;
     font-weight: 500;
@@ -180,7 +175,6 @@ const ToggleText = styled.div`
   }
 `;
 
-// --- RIGHT PANEL (TERMINAL / BRAND) ---
 const BrandSection = styled.div`
   flex: 1.4;
   display: none;
@@ -189,10 +183,7 @@ const BrandSection = styled.div`
   align-items: center;
   position: relative;
   overflow: hidden;
-
-  @media (min-width: 900px) {
-    display: flex;
-  }
+  @media (min-width: 900px) { display: flex; }
 `;
 
 const TerminalWindow = styled.div`
@@ -214,14 +205,10 @@ const TerminalHeader = styled.div`
   align-items: center;
   border-bottom: 1px solid #27272a;
   gap: 8px;
-
-  .dot {
-    width: 12px; height: 12px; border-radius: 50%;
-  }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
   .red { background: #ef4444; }
   .yellow { background: #f59e0b; }
   .green { background: #10b981; }
-  
   .title {
     margin-left: auto;
     margin-right: auto;
@@ -246,7 +233,6 @@ const LogLine = styled.div`
   animation: ${fadeIn} 0.3s ease-out forwards;
   animation-delay: ${props => props.delay}s;
   margin-bottom: 8px;
-
   .highlight { color: #10B981; }
   .string { color: #60a5fa; }
   .warn { color: #f59e0b; }
@@ -262,7 +248,47 @@ const Cursor = styled.span`
   animation: ${blink} 1s step-end infinite;
 `;
 
-// --- MAIN APP COMPONENT ---
+// Loading overlay for status check
+const LoadingOverlay = styled.div`
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  z-index: 10;
+  position: relative;
+`;
+
+const LoadingDots = styled.div`
+  display: flex;
+  gap: 6px;
+  span {
+    width: 8px; height: 8px;
+    background: #10b981;
+    border-radius: 50%;
+    animation: pulse 1.2s infinite;
+    &:nth-child(2) { animation-delay: 0.2s; }
+    &:nth-child(3) { animation-delay: 0.4s; }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+`;
+
+const LoadingText = styled.p`
+  font-family: 'Fira Code', monospace;
+  font-size: 0.8rem;
+  color: #52525b;
+`;
+
+// Steps:
+// 1 = Login
+// 2 = Onboarding
+// 3 = Assessment
+// 4 = Dashboard
+// 0 = Checking status
 
 function App() {
   const [email, setEmail] = useState("");
@@ -270,6 +296,8 @@ function App() {
   const [isLogin, setIsLogin] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
   const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [domain, setDomain] = useState("Backend Development");
 
   const handleSubmit = async () => {
     setErrorMsg("");
@@ -278,6 +306,7 @@ function App() {
       return;
     }
 
+    setLoading(true);
     const endpoint = isLogin ? "/login" : "/signup";
     try {
       const res = await fetch(`http://127.0.0.1:5000${endpoint}`, {
@@ -285,136 +314,205 @@ function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-
       const data = await res.json();
-      
-      if (res.ok) {
-        setStep(2); 
-      } else {
+
+      if (!res.ok) {
         setErrorMsg(data.message || "Authentication failed.");
+        setLoading(false);
+        return;
+      }
+
+      if (!isLogin) {
+        // New signup → go to onboarding
+        setStep(2);
+        setLoading(false);
+        return;
+      }
+
+      // Login: check user status
+      const statusRes = await fetch(`http://127.0.0.1:5000/check_status?email=${encodeURIComponent(email)}`);
+      const statusData = await statusRes.json();
+
+      if (statusData.has_profile && statusData.has_assessment) {
+        // Fully complete → Dashboard
+        setStep(4);
+      } else if (statusData.has_profile && !statusData.has_assessment) {
+        // Profile done, needs quiz
+        if (statusData.domain) setDomain(statusData.domain);
+        setStep(3);
+      } else {
+        // New user or incomplete profile
+        setStep(2);
       }
     } catch (error) {
       setErrorMsg("Connection refused. Is the Python backend active?");
+    } finally {
+      setLoading(false);
     }
   };
 
-  if (step === 1) {
+  const handleLogout = () => {
+    setEmail("");
+    setPassword("");
+    setErrorMsg("");
+    setDomain("Backend Development");
+    setStep(1);
+  };
+
+  // Status check loading
+  if (step === 0) {
     return (
       <>
         <div className="cyber-grid"></div>
-        <PageWrapper>
-          <AuthSection>
-            <AuthContainer>
-              <LogoContainer>
-                <LogoIcon />
-                <LogoText>SkillFuture.AI</LogoText>
-              </LogoContainer>
-              
-              <FormHeader>{isLogin ? "System Login" : "Initialize Account"}</FormHeader>
-              <FormSubtext>
-                {isLogin 
-                  ? "Authenticate to resume your enterprise training modules." 
-                  : "Bridge the gap between theory and industry reality."}
-              </FormSubtext>
+        <LoadingOverlay>
+          <LoadingDots><span /><span /><span /></LoadingDots>
+          <LoadingText>Verifying session...</LoadingText>
+        </LoadingOverlay>
+      </>
+    );
+  }
 
-              <ErrorBanner show={!!errorMsg}>{errorMsg}</ErrorBanner>
-
-              <FormGroup>
-                <Label>Email <span style={{color: '#52525b'}}>*</span></Label>
-                <Input 
-                  type="email" 
-                  placeholder="developer@college.edu" 
-                  value={email} 
-                  onChange={(e) => setEmail(e.target.value)} 
-                />
-              </FormGroup>
-
-              <FormGroup>
-                <Label>
-                  Password 
-                  {isLogin && <span style={{color: '#10B981', cursor: 'pointer', fontSize: '0.75rem'}}>Reset</span>}
-                </Label>
-                <Input 
-                  type="password" 
-                  placeholder="••••••••" 
-                  value={password} 
-                  onChange={(e) => setPassword(e.target.value)} 
-                  onKeyPress={(e) => e.key === 'Enter' && handleSubmit()}
-                />
-              </FormGroup>
-
-              <PrimaryButton onClick={handleSubmit}>
-                {isLogin ? "Authenticate" : "Deploy Environment"}
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                  <polyline points="12 5 19 12 12 19"></polyline>
-                </svg>
-              </PrimaryButton>
-
-              <ToggleText>
-                {isLogin ? "Unregistered?" : "System active?"}
-                <span onClick={() => { setIsLogin(!isLogin); setErrorMsg(""); }}>
-                  {isLogin ? "Create account" : "Log in"}
-                </span>
-              </ToggleText>
-            </AuthContainer>
-          </AuthSection>
-
-          <BrandSection>
-            <TerminalWindow>
-              <TerminalHeader>
-                <div className="dot red"></div>
-                <div className="dot yellow"></div>
-                <div className="dot green"></div>
-                <div className="title">skillfuture-ai-engine ~ root</div>
-              </TerminalHeader>
-              <TerminalBody>
-                <LogLine delay={0.5}>[SYSTEM] Analyzing candidate profile matrix...</LogLine>
-                <LogLine delay={1.5}>[AUTH] GitHub connected. <span className="highlight">Status: Valid</span></LogLine>
-                <LogLine delay={2.5}>[AI_ENGINE] Evaluating backend proficiency...</LogLine>
-                <LogLine delay={4.0}>[ASSIGNMENT] Formulating real-world application.</LogLine>
-                <LogLine delay={5.0} style={{marginTop: '16px'}}>
-                  <span className="warn">► TARGET DOMAIN:</span> Industrial Safety & Compliance
-                </LogLine>
-                <LogLine delay={6.0}>
-                  <span className="warn">► SCENARIO:</span> Build a <span className="string">"Smart Visitor Pre-Authorization System"</span>.
-                </LogLine>
-                <LogLine delay={7.5}>
-                  <span className="warn">► REQUIREMENT:</span> Develop robust API endpoints to manage security protocols and compliance checks for industrial premises.
-                </LogLine>
-                <LogLine delay={9.0} style={{marginTop: '16px', color: '#10B981'}}>
-                  Ready to deploy sandbox environment.<Cursor />
-                </LogLine>
-              </TerminalBody>
-            </TerminalWindow>
-          </BrandSection>
+  // Dashboard
+  if (step === 4) {
+    return (
+      <>
+        <div className="cyber-grid"></div>
+        <PageWrapper style={{ justifyContent: 'center', alignItems: 'flex-start', zIndex: 10 }}>
+          <Dashboard userEmail={email} onLogout={handleLogout} />
         </PageWrapper>
       </>
     );
   }
 
-  // Fallbacks for step 2 & 3 to keep the background active
-  if (step === 2) {
-    return (
-      <>
-        <div className="cyber-grid"></div>
-        <PageWrapper style={{ justifyContent: 'center', alignItems: 'center', zIndex: 10 }}>
-          <Onboarding userEmail={email} onComplete={() => setStep(3)} />
-        </PageWrapper>
-      </>
-    );
-  }
-
+  // Assessment
   if (step === 3) {
     return (
       <>
         <div className="cyber-grid"></div>
         <PageWrapper style={{ justifyContent: 'center', alignItems: 'center', zIndex: 10 }}>
-          <Assessment userEmail={email} />
+          <Assessment
+            userEmail={email}
+            domain={domain}
+            onComplete={() => setStep(4)}
+          />
         </PageWrapper>
       </>
     );
   }
+
+  // Onboarding
+  if (step === 2) {
+    return (
+      <>
+        <div className="cyber-grid"></div>
+        <PageWrapper style={{ justifyContent: 'center', alignItems: 'center', zIndex: 10 }}>
+          <Onboarding
+            userEmail={email}
+            onComplete={(selectedDomain) => {
+              setDomain(selectedDomain || "Backend Development");
+              setStep(3);
+            }}
+          />
+        </PageWrapper>
+      </>
+    );
+  }
+
+  // Login / Signup (step 1)
+  return (
+    <>
+      <div className="cyber-grid"></div>
+      <PageWrapper>
+        <AuthSection>
+          <AuthContainer>
+            <LogoContainer>
+              <LogoIcon />
+              <LogoText>SkillFuture.AI</LogoText>
+            </LogoContainer>
+
+            <FormHeader>{isLogin ? "System Login" : "Initialize Account"}</FormHeader>
+            <FormSubtext>
+              {isLogin
+                ? "Authenticate to resume your enterprise training modules."
+                : "Bridge the gap between theory and industry reality."}
+            </FormSubtext>
+
+            <ErrorBanner show={!!errorMsg}>{errorMsg}</ErrorBanner>
+
+            <FormGroup>
+              <Label>Email <span style={{ color: '#52525b' }}>*</span></Label>
+              <Input
+                type="email"
+                placeholder="developer@college.edu"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </FormGroup>
+
+            <FormGroup>
+              <Label>
+                Password
+                {isLogin && <span style={{ color: '#10B981', cursor: 'pointer', fontSize: '0.75rem' }}>Reset</span>}
+              </Label>
+              <Input
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && !loading && handleSubmit()}
+              />
+            </FormGroup>
+
+            <PrimaryButton onClick={handleSubmit} disabled={loading}>
+              {loading ? "Connecting..." : isLogin ? "Authenticate" : "Deploy Environment"}
+              {!loading && (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>
+              )}
+            </PrimaryButton>
+
+            <ToggleText>
+              {isLogin ? "Unregistered?" : "System active?"}
+              <span onClick={() => { setIsLogin(!isLogin); setErrorMsg(""); }}>
+                {isLogin ? "Create account" : "Log in"}
+              </span>
+            </ToggleText>
+          </AuthContainer>
+        </AuthSection>
+
+        <BrandSection>
+          <TerminalWindow>
+            <TerminalHeader>
+              <div className="dot red"></div>
+              <div className="dot yellow"></div>
+              <div className="dot green"></div>
+              <div className="title">skillfuture-ai-engine ~ root</div>
+            </TerminalHeader>
+            <TerminalBody>
+              <LogLine delay={0.5}>[SYSTEM] Analyzing candidate profile matrix...</LogLine>
+              <LogLine delay={1.5}>[AUTH] GitHub connected. <span className="highlight">Status: Valid</span></LogLine>
+              <LogLine delay={2.5}>[AI_ENGINE] Evaluating backend proficiency...</LogLine>
+              <LogLine delay={4.0}>[ASSIGNMENT] Formulating real-world application.</LogLine>
+              <LogLine delay={5.0} style={{ marginTop: '16px' }}>
+                <span className="warn">► TARGET DOMAIN:</span> Industrial Safety & Compliance
+              </LogLine>
+              <LogLine delay={6.0}>
+                <span className="warn">► SCENARIO:</span> Build a <span className="string">"Smart Visitor Pre-Authorization System"</span>.
+              </LogLine>
+              <LogLine delay={7.5}>
+                <span className="warn">► REQUIREMENT:</span> Develop robust API endpoints to manage security protocols and compliance checks.
+              </LogLine>
+              <LogLine delay={9.0} style={{ marginTop: '16px', color: '#10B981' }}>
+                Ready to deploy sandbox environment.<Cursor />
+              </LogLine>
+            </TerminalBody>
+          </TerminalWindow>
+        </BrandSection>
+      </PageWrapper>
+    </>
+  );
 }
 
 export default App;

@@ -3,182 +3,498 @@ from flask_cors import CORS
 from pymongo import MongoClient
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+import requests
+import re
+import os
 
 app = Flask(__name__)
 CORS(app)
 
-# --- Your Original MongoDB Connection Logic ---
+# --- MongoDB ---
 try:
     client = MongoClient("mongodb://localhost:27017/", serverSelectionTimeoutMS=5000)
     client.admin.command('ismaster')
     print("MongoDB connected successfully")
 except Exception as e:
     print(f"MongoDB connection failed: {e}")
-    # Note: Start MongoDB service with 'net start MongoDB'
     raise
 
 db = client["skillfuture"]
 users_col = db["users"]
 
-# --- The Assessment Logic you asked to add ---
-assessment_questions = [
-    {
-        "id": 1,
-        "type": "mcq",
-        "question": "What is the output of print(3 + 2 * 2)?",
-        "options": ["10", "7", "8", "12"],
-        "answer": "7",
-        "explanation": "Multiplication happens first (2*2=4), then 3+4=7."
-    },
-    {
-        "id": 2,
-        "type": "mcq",
-        "question": "Which data type is used to store text?",
-        "options": ["int", "float", "str", "bool"],
-        "answer": "str",
-        "explanation": "Strings (str) are used to store text in Python."
-    },
-    {
-        "id": 3,
-        "type": "mcq",
-        "question": "Which symbol is used for comments in Python?",
-        "options": ["//", "#", "/* */", "--"],
-        "answer": "#",
-        "explanation": "# is used to write comments in Python."
-    },
-    {
-        "id": 4,
-        "type": "mcq",
-        "question": "Which keyword is used to define a function in Python?",
-        "options": ["func", "define", "def", "function"],
-        "answer": "def",
-        "explanation": "Functions in Python are defined using the 'def' keyword."
-    },
-    {
-        "id": 5,
-        "type": "mcq",
-        "question": "What will len([1,2,3,4]) return?",
-        "options": ["3", "4", "5", "Error"],
-        "answer": "4",
-        "explanation": "len() returns the number of elements in a list."
-    },
-    {
-        "id": 6,
-        "type": "mcq",
-        "question": "Which operator is used for equality check?",
-        "options": ["=", "==", "!=", ">="],
-        "answer": "==",
-        "explanation": "== is used to compare two values."
-    },
-    {
-        "id": 7,
-        "type": "mcq",
-        "question": "Which loop is used when number of iterations is known?",
-        "options": ["while", "for", "do-while", "loop"],
-        "answer": "for",
-        "explanation": "For loop is used when iterations are predefined."
-    },
-    {
-        "id": 8,
-        "type": "mcq",
-        "question": "Which of these is a valid variable name?",
-        "options": ["1name", "name_1", "name-1", "@name"],
-        "answer": "name_1",
-        "explanation": "Variable names cannot start with numbers or special symbols except underscore."
-    }
-]
+# --- Gemini API Key (Optional) ---
+# Set your key: export GEMINI_API_KEY="your_key_here"
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
-# --- Your Original Routes (Unchanged Logic) ---
+# ─────────────────────────────────────────────────────────────────
+# DOMAIN-SPECIFIC QUESTION BANK
+# ─────────────────────────────────────────────────────────────────
+QUESTION_BANK = {
+    "Frontend Development": [
+        {
+            "id": 1, "type": "mcq",
+            "question": "Which CSS property creates a flex container?",
+            "options": ["display: grid", "display: flex", "display: block", "display: inline"],
+            "answer": "display: flex",
+            "explanation": "display: flex enables flexbox layout on the container element."
+        },
+        {
+            "id": 2, "type": "mcq",
+            "question": "What does the React useState hook return?",
+            "options": ["Only a value", "Only a setter function", "An array [value, setter]", "An object with methods"],
+            "answer": "An array [value, setter]",
+            "explanation": "useState returns [state, setState] — a value and its updater function."
+        },
+        {
+            "id": 3, "type": "mcq",
+            "question": "What is the correct HTML tag for the largest heading?",
+            "options": ["<h6>", "<heading>", "<h1>", "<head>"],
+            "answer": "<h1>",
+            "explanation": "<h1> is the largest heading tag; h6 is the smallest."
+        },
+        {
+            "id": 4, "type": "mcq",
+            "question": "Which JavaScript method selects an element by its ID?",
+            "options": ["querySelector", "getElementById", "getElement", "findById"],
+            "answer": "getElementById",
+            "explanation": "document.getElementById('id') returns the element with that specific ID."
+        },
+        {
+            "id": 5, "type": "mcq",
+            "question": "What does CSS stand for?",
+            "options": ["Computer Style Sheets", "Cascading Style Sheets", "Creative Styling Syntax", "Coded Stylesheet"],
+            "answer": "Cascading Style Sheets",
+            "explanation": "CSS = Cascading Style Sheets — it styles HTML documents."
+        },
+        {
+            "id": 6, "type": "mcq",
+            "question": "What is React's virtual DOM?",
+            "options": [
+                "A real browser DOM copy",
+                "A lightweight in-memory representation of the DOM",
+                "A MongoDB database",
+                "A browser extension"
+            ],
+            "answer": "A lightweight in-memory representation of the DOM",
+            "explanation": "React diffs the virtual DOM with the real DOM to minimize expensive updates."
+        },
+        {
+            "id": 7, "type": "mcq",
+            "question": "Which CSS unit is relative to the root element's font-size?",
+            "options": ["em", "px", "rem", "vh"],
+            "answer": "rem",
+            "explanation": "rem (root em) is relative to the <html> element's font-size."
+        },
+        {
+            "id": 8, "type": "mcq",
+            "question": "Which React hook replaces componentDidMount?",
+            "options": ["useEffect", "useState", "useRef", "useContext"],
+            "answer": "useEffect",
+            "explanation": "useEffect with [] dependency array runs once after mount — equivalent to componentDidMount."
+        },
+        {
+            "id": 9, "type": "mcq",
+            "question": "What does typeof null return in JavaScript?",
+            "options": ["null", "undefined", "object", "string"],
+            "answer": "object",
+            "explanation": "typeof null === 'object' is a long-standing JavaScript bug kept for backward compatibility."
+        },
+        {
+            "id": 10, "type": "mcq",
+            "question": "Which HTML attribute makes an input field mandatory?",
+            "options": ["mandatory", "required", "validate", "must"],
+            "answer": "required",
+            "explanation": "The 'required' attribute prevents form submission when the field is empty."
+        },
+    ],
+    "Backend Development": [
+        {
+            "id": 1, "type": "mcq",
+            "question": "What is the output of: print(3 + 2 * 2)?",
+            "options": ["10", "7", "8", "12"],
+            "answer": "7",
+            "explanation": "Operator precedence: multiplication first (2×2=4), then 3+4=7."
+        },
+        {
+            "id": 2, "type": "mcq",
+            "question": "Which HTTP method is used to CREATE a new resource?",
+            "options": ["GET", "PUT", "POST", "DELETE"],
+            "answer": "POST",
+            "explanation": "POST creates new resources; PUT updates existing ones."
+        },
+        {
+            "id": 3, "type": "mcq",
+            "question": "What does SQL JOIN do?",
+            "options": ["Deletes rows", "Combines rows from two or more tables", "Updates data", "Creates a table"],
+            "answer": "Combines rows from two or more tables",
+            "explanation": "JOIN merges rows from multiple tables based on a related column."
+        },
+        {
+            "id": 4, "type": "mcq",
+            "question": "Which Python keyword defines a function?",
+            "options": ["func", "define", "def", "function"],
+            "answer": "def",
+            "explanation": "Python functions are defined with the 'def' keyword."
+        },
+        {
+            "id": 5, "type": "mcq",
+            "question": "What HTTP status code means 'Not Found'?",
+            "options": ["200", "401", "404", "500"],
+            "answer": "404",
+            "explanation": "404 means the server cannot find the requested resource."
+        },
+        {
+            "id": 6, "type": "mcq",
+            "question": "Which of these is a NoSQL database?",
+            "options": ["MySQL", "PostgreSQL", "MongoDB", "SQLite"],
+            "answer": "MongoDB",
+            "explanation": "MongoDB is a document-oriented NoSQL database."
+        },
+        {
+            "id": 7, "type": "mcq",
+            "question": "What does ORM stand for?",
+            "options": ["Object Relational Mapping", "Online Resource Manager", "Optimized Runtime Model", "Object Request Module"],
+            "answer": "Object Relational Mapping",
+            "explanation": "ORM maps database tables to code objects for easier data access."
+        },
+        {
+            "id": 8, "type": "mcq",
+            "question": "What is middleware in web development?",
+            "options": ["A database layer", "Software bridging request and response pipeline", "A frontend framework", "A testing tool"],
+            "answer": "Software bridging request and response pipeline",
+            "explanation": "Middleware processes requests/responses between client and business logic."
+        },
+        {
+            "id": 9, "type": "mcq",
+            "question": "Which Python library is used for building REST APIs?",
+            "options": ["NumPy", "Pandas", "Flask", "Matplotlib"],
+            "answer": "Flask",
+            "explanation": "Flask is a lightweight micro web framework for building REST APIs."
+        },
+        {
+            "id": 10, "type": "mcq",
+            "question": "What does len([1, 2, 3, 4]) return?",
+            "options": ["3", "4", "5", "Error"],
+            "answer": "4",
+            "explanation": "len() returns the number of elements in a list. This list has 4 elements."
+        },
+    ],
+    "AIML": [
+        {
+            "id": 1, "type": "mcq",
+            "question": "What is supervised learning?",
+            "options": [
+                "Learning with no labels",
+                "Learning with labeled training data",
+                "Reinforcement from environment",
+                "Self-supervised learning"
+            ],
+            "answer": "Learning with labeled training data",
+            "explanation": "Supervised learning uses labeled input-output pairs to train predictive models."
+        },
+        {
+            "id": 2, "type": "mcq",
+            "question": "Which Python library is most used for Machine Learning?",
+            "options": ["Flask", "Pandas", "Scikit-learn", "Django"],
+            "answer": "Scikit-learn",
+            "explanation": "Scikit-learn provides ML algorithms, pipelines, and evaluation tools."
+        },
+        {
+            "id": 3, "type": "mcq",
+            "question": "What does 'overfitting' mean?",
+            "options": [
+                "Model performs well on training, poorly on test data",
+                "Model performs well on both sets",
+                "Model fails to train",
+                "Model has too few parameters"
+            ],
+            "answer": "Model performs well on training, poorly on test data",
+            "explanation": "Overfitting means the model memorized training data instead of learning general patterns."
+        },
+        {
+            "id": 4, "type": "mcq",
+            "question": "What is a neural network?",
+            "options": [
+                "A type of database",
+                "Interconnected nodes that learn from data, inspired by the brain",
+                "A web server",
+                "A sorting algorithm"
+            ],
+            "answer": "Interconnected nodes that learn from data, inspired by the brain",
+            "explanation": "Neural networks use layers of nodes to learn hierarchical data representations."
+        },
+        {
+            "id": 5, "type": "mcq",
+            "question": "Which library is the primary framework for deep learning?",
+            "options": ["Matplotlib", "TensorFlow", "SQLAlchemy", "BeautifulSoup"],
+            "answer": "TensorFlow",
+            "explanation": "TensorFlow (and PyTorch) are the leading deep learning frameworks."
+        },
+        {
+            "id": 6, "type": "mcq",
+            "question": "What is the purpose of a train/test split?",
+            "options": [
+                "To reduce dataset size",
+                "To evaluate model generalization on unseen data",
+                "To increase model speed",
+                "To remove duplicates"
+            ],
+            "answer": "To evaluate model generalization on unseen data",
+            "explanation": "Holding out test data simulates how the model performs on real, unseen examples."
+        },
+        {
+            "id": 7, "type": "mcq",
+            "question": "Which algorithm is commonly used for classification?",
+            "options": ["K-Means", "PCA", "Random Forest", "Linear Regression"],
+            "answer": "Random Forest",
+            "explanation": "Random Forest is an ensemble method used for classification and regression."
+        },
+        {
+            "id": 8, "type": "mcq",
+            "question": "What does NLP stand for?",
+            "options": ["Natural Language Processing", "Neural Learning Protocol", "Numeric Learning Program", "Network Layer Protocol"],
+            "answer": "Natural Language Processing",
+            "explanation": "NLP enables computers to understand, interpret, and generate human language."
+        },
+        {
+            "id": 9, "type": "mcq",
+            "question": "What does data normalization do?",
+            "options": ["Removes duplicates", "Scales features to a similar range", "Adds more training data", "Splits datasets"],
+            "answer": "Scales features to a similar range",
+            "explanation": "Normalization prevents features with larger magnitudes from dominating the model."
+        },
+        {
+            "id": 10, "type": "mcq",
+            "question": "Which Pandas method shows the first 5 rows of a DataFrame?",
+            "options": ["df.tail()", "df.info()", "df.head()", "df.describe()"],
+            "answer": "df.head()",
+            "explanation": "df.head() returns the first 5 rows of a DataFrame by default."
+        },
+    ]
+}
+
+# ─────────────────────────────────────────────────────────────────
+# UTILITIES
+# ─────────────────────────────────────────────────────────────────
+def normalize_domain(domain):
+    if not domain:
+        return "Backend Development"
+    d = domain.lower()
+    if "frontend" in d:
+        return "Frontend Development"
+    if "aiml" in d or "ai" in d or "ml" in d or "machine" in d:
+        return "AIML"
+    return "Backend Development"
+
+def extract_github_username(url):
+    if not url:
+        return None
+    match = re.search(r'github\.com/([^/?\s]+)', url)
+    return match.group(1) if match else None
+
+def scan_github(github_url):
+    username = extract_github_username(github_url)
+    if not username:
+        return {"repo_count": 0, "followers": 0, "github_score": 0, "username": ""}
+    try:
+        resp = requests.get(
+            f"https://api.github.com/users/{username}",
+            headers={"Accept": "application/vnd.github+json"},
+            timeout=6
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            repo_count = data.get("public_repos", 0)
+            followers = data.get("followers", 0)
+            github_score = min(25, repo_count * 2) + min(5, followers // 5)
+            return {
+                "repo_count": repo_count,
+                "followers": followers,
+                "github_score": github_score,
+                "username": username,
+                "avatar_url": data.get("avatar_url", ""),
+                "bio": data.get("bio", "")
+            }
+    except Exception as e:
+        print(f"GitHub scan error: {e}")
+    return {"repo_count": 0, "followers": 0, "github_score": 0, "username": username}
+
+def generate_gemini_analysis(user_data):
+    if not GEMINI_API_KEY:
+        return None
+    try:
+        skills_str = ", ".join(user_data.get("skills", [])) or "Not specified"
+        assessment = user_data.get("latest_assessment", {})
+        prompt = f"""You are a career coach analyzing a student's tech profile. Be concise and practical.
+
+Profile:
+- Name: {user_data.get('name', 'Student')}
+- Domain: {user_data.get('domain_interest', 'Tech')}
+- Experience Level: {user_data.get('experience_level', 'Beginner')}
+- Skills: {skills_str}
+- Assessment Score: {assessment.get('percentage', 0):.1f}% ({assessment.get('level', 'Unknown')} level)
+- GitHub Repos: {user_data.get('github_data', {}).get('repo_count', 0)}
+- Self Ratings: Coding {user_data.get('self_rating', {}).get('coding', 1)}/5, Debugging {user_data.get('self_rating', {}).get('debugging', 1)}/5
+
+Provide a personalized analysis in exactly this format (no markdown, plain text):
+
+PROFILE_SUMMARY: [2 sentences about their current standing]
+STRENGTH_1: [Key technical strength]
+STRENGTH_2: [Another strength]
+GAP_1: [Critical skill gap to address]
+GAP_2: [Another gap]
+ACTION_1: [Specific immediate action to get hired faster]
+ACTION_2: [Another specific action]
+JOB_READINESS: [A percentage 0-100 based on their overall profile]
+
+Keep each field to 1 sentence max."""
+
+        resp = requests.post(
+            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}",
+            json={"contents": [{"parts": [{"text": prompt}]}]},
+            timeout=12
+        )
+        if resp.status_code == 200:
+            result = resp.json()
+            return result['candidates'][0]['content']['parts'][0]['text']
+    except Exception as e:
+        print(f"Gemini error: {e}")
+    return None
+
+# ─────────────────────────────────────────────────────────────────
+# ROUTES
+# ─────────────────────────────────────────────────────────────────
 
 @app.route('/signup', methods=['POST'])
 def signup():
     data = request.json
-    email = data.get('email')
-    password = data.get('password')
-
+    email = data.get('email', '').strip()
+    password = data.get('password', '')
+    if not email or not password:
+        return jsonify({"message": "Email and password are required"}), 400
     if users_col.find_one({"email": email}):
         return jsonify({"message": "Email already registered"}), 400
-
-    hashed_password = generate_password_hash(password)
-    users_col.insert_one({"email": email, "password": hashed_password})
-    return jsonify({"message": "User registered successfully"})
+    users_col.insert_one({"email": email, "password": generate_password_hash(password)})
+    return jsonify({"message": "Account created successfully"})
 
 @app.route('/login', methods=['POST'])
 def login():
     data = request.json
-    email = data.get('email')
-    password = data.get('password')
-
+    email = data.get('email', '').strip()
+    password = data.get('password', '')
     user = users_col.find_one({"email": email})
     if not user or not check_password_hash(user['password'], password):
         return jsonify({"message": "Invalid credentials"}), 401
-
     return jsonify({"message": "Login successful", "email": email})
+
+@app.route('/check_status', methods=['GET'])
+def check_status():
+    email = request.args.get('email', '').strip()
+    if not email:
+        return jsonify({"error": "Email required"}), 400
+    user = users_col.find_one({"email": email}, {"_id": 0, "password": 0})
+    if not user:
+        return jsonify({"status": "no_user"}), 404
+
+    has_profile = bool(user.get("name") and user.get("profile_completed_at"))
+    has_assessment = user.get("latest_assessment") is not None
+
+    return jsonify({
+        "status": "ok",
+        "has_profile": has_profile,
+        "has_assessment": has_assessment,
+        "domain": user.get("domain_interest", ""),
+        "profile": {
+            "name": user.get("name", ""),
+            "domain_interest": user.get("domain_interest", "")
+        } if has_profile else None
+    })
 
 @app.route('/onboarding', methods=['POST'])
 def onboarding():
     data = request.json
-    skills_list = [s.strip() for s in data.get("skills", "").split(",")]
+    email = data.get('email', '').strip()
+    if not email:
+        return jsonify({"message": "Email is required"}), 400
+
+    # GitHub scanning
+    github_url = data.get('github', '').strip()
+    github_data = scan_github(github_url) if github_url else {
+        "repo_count": 0, "followers": 0, "github_score": 0, "username": ""
+    }
+
+    # LinkedIn bonus (5 points for providing it)
+    linkedin_score = 5 if data.get('linkedin', '').strip() else 0
+
+    skills = data.get('skills', [])
+    if isinstance(skills, str):
+        skills = [s.strip() for s in skills.split(',') if s.strip()]
 
     user_data = {
-        "name": data.get("name"),
-        "college": data.get("college"),
-        "degree": data.get("degree"),
-        "year": data.get("year"),
-        "skills": skills_list,
-        "experience_level": data.get("experience_level"),
-        "projects": data.get("projects"),
-        "domain_interest": data.get("domain"),
-        "goal": data.get("goal"),
-        "github": data.get("github"),
-        "linkedin": data.get("linkedin"),
+        "name": data.get("name", "").strip(),
+        "college": data.get("college", "").strip(),
+        "degree": data.get("degree", "").strip(),
+        "year": data.get("year", ""),
+        "skills": skills,
+        "experience_level": data.get("experience_level", ""),
+        "projects": data.get("projects", "").strip(),
+        "domain_interest": data.get("domain", ""),
+        "goal": data.get("goal", ""),
+        "github": github_url,
+        "linkedin": data.get("linkedin", "").strip(),
+        "github_data": github_data,
+        "linkedin_score": linkedin_score,
         "self_rating": {
             "coding": int(data.get("coding", 1)),
             "debugging": int(data.get("debugging", 1)),
             "problem_solving": int(data.get("problem_solving", 1))
         },
-        "learning_style": data.get("learning_style"),
-        "daily_hours": data.get("daily_hours")
+        "learning_style": data.get("learning_style", ""),
+        "daily_hours": data.get("daily_hours", ""),
+        "profile_completed_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
 
-    # Fixed: Use users_col as defined at top
-    users_col.insert_one(user_data) 
-    return jsonify({"message": "Profile saved successfully 🚀"})
+    users_col.update_one({"email": email}, {"$set": user_data}, upsert=True)
+    return jsonify({
+        "message": "Profile saved successfully",
+        "github_data": github_data,
+        "linkedin_score": linkedin_score
+    })
 
-# --- New Assessment Route ---
 @app.route('/get_questions', methods=['GET'])
 def get_questions():
-    return jsonify(assessment_questions)
+    domain = request.args.get('domain', 'Backend Development')
+    normalized = normalize_domain(domain)
+    questions = QUESTION_BANK.get(normalized, QUESTION_BANK['Backend Development'])
+    return jsonify(questions)
 
-# --- Submit Assessment Logic ---
 @app.route('/submit-assessment', methods=['POST'])
 def submit_assessment():
     try:
         data = request.json
-        user_email = data.get('email')
-        # Extract the answers dictionary from the nested JSON
-        user_answers = data.get('answers', {}) 
+        user_email = data.get('email', '').strip()
+        user_answers = data.get('answers', {})
+        domain = normalize_domain(data.get('domain', 'Backend Development'))
+
+        questions = QUESTION_BANK.get(domain, QUESTION_BANK['Backend Development'])
 
         score = 0
         weak_areas = []
         strong_areas = []
 
-        for q in assessment_questions:
+        for q in questions:
             qid = str(q["id"])
-            # Ensure we compare strings properly by cleaning whitespace and case
-            correct = str(q["answer"]).lower().strip()
-            user_ans = str(user_answers.get(qid, "")).lower().strip()
-
+            correct = str(q["answer"]).strip()
+            user_ans = str(user_answers.get(qid, "")).strip()
             if user_ans == correct:
                 score += 1
                 strong_areas.append(q["question"])
             else:
                 weak_areas.append(q["question"])
 
-        total = len(assessment_questions)
+        total = len(questions)
         percentage = (score / total) * 100
 
-        # Skill level Logic
         if percentage < 40:
             level = "Beginner"
         elif percentage < 70:
@@ -186,13 +502,45 @@ def submit_assessment():
         else:
             level = "Advanced"
 
-        # Domain Recommendation Logic
-        if level == "Beginner":
-            domain = "Start with Python Fundamentals"
-        elif level == "Intermediate":
-            domain = "Backend Development (APIs + DB)"
-        else:
-            domain = "Advanced Backend / System Design"
+        domain_recs = {
+            "Frontend Development": {
+                "Beginner": "Master HTML, CSS & JS Basics",
+                "Intermediate": "Build React Projects with APIs",
+                "Advanced": "Performance Optimization & System Design"
+            },
+            "Backend Development": {
+                "Beginner": "Start with Python & Core Programming",
+                "Intermediate": "REST APIs + Database Integration",
+                "Advanced": "Microservices & Distributed Systems"
+            },
+            "AIML": {
+                "Beginner": "Python + Math Foundations for ML",
+                "Intermediate": "ML Algorithms & End-to-End Projects",
+                "Advanced": "Deep Learning, MLOps & Research"
+            }
+        }
+        recommended_domain = domain_recs.get(domain, domain_recs["Backend Development"]).get(level, "Continue Learning")
+
+        # Get user profile for composite score
+        user = users_col.find_one({"email": user_email})
+        github_score = user.get("github_data", {}).get("github_score", 0) if user else 0
+        linkedin_score = user.get("linkedin_score", 0) if user else 0
+        self_rating = user.get("self_rating", {}) if user else {}
+        coding_r = int(self_rating.get("coding", 1))
+        debug_r  = int(self_rating.get("debugging", 1))
+        ps_r     = int(self_rating.get("problem_solving", 1))
+        self_score_pct = ((coding_r + debug_r + ps_r) / 15) * 100
+
+        # Weighted overall score
+        quiz_weight      = 0.55
+        self_weight      = 0.20
+        portfolio_weight = 0.25
+        portfolio_score  = min(100, ((github_score + linkedin_score) / 35) * 100)
+        overall_score    = round(
+            percentage * quiz_weight +
+            self_score_pct * self_weight +
+            portfolio_score * portfolio_weight
+        )
 
         result = {
             "email": user_email,
@@ -200,30 +548,44 @@ def submit_assessment():
             "total": total,
             "percentage": percentage,
             "level": level,
-            "recommended_domain": domain,
+            "domain": domain,
+            "recommended_domain": recommended_domain,
             "strong_areas": strong_areas,
             "weak_areas": weak_areas,
-            "timestamp": datetime.now()
+            "github_score": github_score,
+            "overall_score": overall_score,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
 
-        # Save in MongoDB (using users_col as defined in your previous script)
-        # We use update_one with upsert=True so we don't create 100 documents for 1 user
+        # Gemini AI analysis
+        if user:
+            user_for_gemini = dict(user)
+            user_for_gemini["latest_assessment"] = result
+            ai_analysis = generate_gemini_analysis(user_for_gemini)
+            if ai_analysis:
+                result["ai_analysis"] = ai_analysis
+
         users_col.update_one(
             {"email": user_email},
             {"$set": {"latest_assessment": result}},
             upsert=True
         )
 
-        # Return the result (jsonify handles datetime objects poorly, 
-        # so we convert timestamp to string or just exclude it from the response)
-        response_data = result.copy()
-        response_data["timestamp"] = result["timestamp"].strftime("%Y-%m-%d %H:%M:%S")
-        
-        return jsonify(response_data)
+        return jsonify(result)
 
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error in submit_assessment: {e}")
         return jsonify({"message": "Server error", "error": str(e)}), 500
+
+@app.route('/get_dashboard', methods=['GET'])
+def get_dashboard():
+    email = request.args.get('email', '').strip()
+    if not email:
+        return jsonify({"error": "Email required"}), 400
+    user = users_col.find_one({"email": email}, {"_id": 0, "password": 0})
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    return jsonify(user)
 
 if __name__ == '__main__':
     app.run(debug=True)
