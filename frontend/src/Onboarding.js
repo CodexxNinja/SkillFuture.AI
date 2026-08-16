@@ -465,9 +465,9 @@ const STEPS = [
 ];
 
 const DOMAIN_OPTIONS = [
-  { value: "Frontend Development", icon: "🎨", desc: "UI/UX, React, CSS" },
-  { value: "Backend Development", icon: "⚙️", desc: "APIs, DBs, Python" },
-  { value: "AIML", icon: "🤖", desc: "ML, Data Science, DL" },
+  { value: "Frontend Development",  desc: "UI/UX, React, CSS" },
+  { value: "Backend Development",  desc: "APIs, DBs, Python" },
+  { value: "AIML",  desc: "ML, Data Science, DL" },
 ];
 
 const GOAL_OPTIONS = [

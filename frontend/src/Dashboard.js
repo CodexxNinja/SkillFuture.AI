@@ -590,7 +590,14 @@ const AIBadge = styled.div`
   font-size: 0.65rem;
   color: #10b981;
 `;
-
+const PulsingDot = styled.span`
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  animation: ${pulse} 2s infinite;
+`;
 const AIGrid = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -850,53 +857,53 @@ function getNextActions(level, domain) {
   const map = {
     "Frontend Development": {
       Beginner: [
-        { icon: '📚', title: 'Complete a CSS Grid + Flexbox course', desc: 'Foundation of every modern UI layout' },
-        { icon: '⚡', title: 'Build your first React app', desc: 'Todo list or weather app — deploy to Vercel' },
-        { icon: '🔗', title: 'Set up your GitHub profile README', desc: 'Showcase your projects with live demos' },
+        { title: 'Complete a CSS Grid + Flexbox course', desc: 'Foundation of every modern UI layout' },
+        { title: 'Build your first React app', desc: 'Todo list or weather app — deploy to Vercel' },
+        { title: 'Set up your GitHub profile README', desc: 'Showcase your projects with live demos' },
       ],
       Intermediate: [
-        { icon: '⚡', title: 'Build a full React project with API', desc: 'CRUD app + user auth + deployed' },
-        { icon: '🎯', title: 'Solve 20 LeetCode Easy problems', desc: 'Prepare for technical screening rounds' },
-        { icon: '🚀', title: 'Apply to frontend internships', desc: 'Start with startups — faster interviews' },
+        { title: 'Build a full React project with API', desc: 'CRUD app + user auth + deployed' },
+        { title: 'Solve 20 LeetCode Easy problems', desc: 'Prepare for technical screening rounds' },
+        { title: 'Apply to frontend internships', desc: 'Start with startups — faster interviews' },
       ],
       Advanced: [
-        { icon: '🧩', title: 'Build a component library', desc: 'Publish to npm · show architectural skill' },
-        { icon: '🔬', title: 'Contribute to an open-source project', desc: 'React, Next.js or Tailwind ecosystem' },
-        { icon: '🎯', title: 'Target mid-level roles actively', desc: '3+ YOE equivalent — showcase impact metrics' },
+        { title: 'Build a component library', desc: 'Publish to npm · show architectural skill' },
+        { title: 'Contribute to an open-source project', desc: 'React, Next.js or Tailwind ecosystem' },
+        { title: 'Target mid-level roles actively', desc: '3+ YOE equivalent — showcase impact metrics' },
       ],
     },
     "Backend Development": {
       Beginner: [
-        { icon: '📚', title: 'Start Python Fundamentals Module', desc: 'Variables, OOP, functions — 2 weeks solid' },
-        { icon: '🛠', title: 'Build a CLI task manager', desc: 'Apply Python basics in a real project' },
-        { icon: '🔗', title: 'Update GitHub with a pinned project', desc: 'README + demo link = credibility' },
+        { title: 'Start Python Fundamentals Module', desc: 'Variables, OOP, functions — 2 weeks solid' },
+        { title: 'Build a CLI task manager', desc: 'Apply Python basics in a real project' },
+        { title: 'Update GitHub with a pinned project', desc: 'README + demo link = credibility' },
       ],
       Intermediate: [
-        { icon: '⚡', title: 'Build a REST API with Flask', desc: 'CRUD endpoints + MongoDB + JWT auth' },
-        { icon: '🗄', title: 'Connect and optimize your database', desc: 'Indexing, schema design, aggregations' },
-        { icon: '🚀', title: 'Deploy to Railway or Render', desc: 'Free tier · live API URL for your resume' },
+        { title: 'Build a REST API with Flask', desc: 'CRUD endpoints + MongoDB + JWT auth' },
+        { title: 'Connect and optimize your database', desc: 'Indexing, schema design, aggregations' },
+        { title: 'Deploy to Railway or Render', desc: 'Free tier · live API URL for your resume' },
       ],
       Advanced: [
-        { icon: '🧩', title: 'Design a distributed system', desc: 'Cache layer + queue + 3 microservices' },
-        { icon: '🔬', title: 'Contribute to open source', desc: 'Flask, FastAPI, or Django ecosystem' },
-        { icon: '🎯', title: 'Mock system design interviews', desc: 'Target FAANG-adjacent companies' },
+        { title: 'Design a distributed system', desc: 'Cache layer + queue + 3 microservices' },
+        { title: 'Contribute to open source', desc: 'Flask, FastAPI, or Django ecosystem' },
+        { title: 'Mock system design interviews', desc: 'Target FAANG-adjacent companies' },
       ],
     },
     "AIML": {
       Beginner: [
-        { icon: '📚', title: 'Complete Andrew Ng ML course', desc: 'The gold standard for ML foundations' },
-        { icon: '🛠', title: 'Build a classification project', desc: 'Iris / Titanic dataset on Kaggle' },
-        { icon: '🔗', title: 'Create a Kaggle profile', desc: 'Participate in competitions for visibility' },
+        { title: 'Complete Andrew Ng ML course', desc: 'The gold standard for ML foundations' },
+        { title: 'Build a classification project', desc: 'Iris / Titanic dataset on Kaggle' },
+        { title: 'Create a Kaggle profile', desc: 'Participate in competitions for visibility' },
       ],
       Intermediate: [
-        { icon: '⚡', title: 'Train a deep learning model end-to-end', desc: 'Data → preprocess → train → evaluate' },
-        { icon: '🗄', title: 'Deploy a model as an API', desc: 'Flask + TensorFlow → Heroku / HuggingFace' },
-        { icon: '🚀', title: 'Apply to data intern roles', desc: 'Show 2 Kaggle notebooks on your resume' },
+        { title: 'Train a deep learning model end-to-end', desc: 'Data → preprocess → train → evaluate' },
+        { title: 'Deploy a model as an API', desc: 'Flask + TensorFlow → Heroku / HuggingFace' },
+        { title: 'Apply to data intern roles', desc: 'Show 2 Kaggle notebooks on your resume' },
       ],
       Advanced: [
-        { icon: '🧩', title: 'Fine-tune a transformer model', desc: 'HuggingFace + custom dataset' },
-        { icon: '🔬', title: 'Reproduce a recent ML paper', desc: 'Shows research-level capability to employers' },
-        { icon: '🎯', title: 'Target ML engineer roles', desc: 'MNCs + AI startups — strong portfolio wins' },
+        { title: 'Fine-tune a transformer model', desc: 'HuggingFace + custom dataset' },
+        { title: 'Reproduce a recent ML paper', desc: 'Shows research-level capability to employers' },
+        { title: 'Target ML engineer roles', desc: 'MNCs + AI startups — strong portfolio wins' },
       ],
     },
   };
@@ -921,7 +928,7 @@ function parseAIAnalysis(text) {
 // ─────────────────────────────────────────────────────────────────
 // COMPONENT
 // ─────────────────────────────────────────────────────────────────
-function Dashboard({ userEmail, onLogout }) {
+function Dashboard({ userEmail, onLogout, onOpenHub }) {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -993,6 +1000,12 @@ function Dashboard({ userEmail, onLogout }) {
           </HeaderLeft>
           <HeaderRight>
             <LevelBadge level={level}>{level}</LevelBadge>
+            <LogoutBtn onClick={onOpenHub} style={{ borderColor: '#10b981', color: '#10b981' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+              </svg>
+              Learning Hub
+            </LogoutBtn>
             <LogoutBtn onClick={onLogout}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
@@ -1273,7 +1286,7 @@ function Dashboard({ userEmail, onLogout }) {
                 <h2>AI-Powered Analysis</h2>
               </SectionTitle>
               <AIBadge>
-                <span style={{ animation: `${pulse} 2s infinite`, display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: '#10b981' }} />
+                <PulsingDot />
                 Gemini 1.5 Flash
               </AIBadge>
             </AIHeader>

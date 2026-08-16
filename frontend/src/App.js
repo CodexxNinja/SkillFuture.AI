@@ -4,6 +4,7 @@ import "./App.css";
 import Assessment from "./Assessment";
 import Dashboard from "./Dashboard";
 import Onboarding from "./Onboarding";
+import LearningHub from "./LearningHub";
 
 // --- ANIMATIONS ---
 const fadeIn = keyframes`
@@ -378,7 +379,20 @@ function App() {
       <>
         <div className="cyber-grid"></div>
         <PageWrapper style={{ justifyContent: 'center', alignItems: 'flex-start', zIndex: 10 }}>
-          <Dashboard userEmail={email} onLogout={handleLogout} />
+          <Dashboard userEmail={email} onLogout={handleLogout} onOpenHub={() => setStep(5)} />
+        </PageWrapper>
+      </>
+    );
+  }
+
+
+  // Learning Hub
+  if (step === 5) {
+    return (
+      <>
+        <div className="cyber-grid"></div>
+        <PageWrapper style={{ justifyContent: 'center', alignItems: 'flex-start', zIndex: 10 }}>
+          <LearningHub userEmail={email} onBack={() => setStep(4)} />
         </PageWrapper>
       </>
     );
@@ -430,11 +444,11 @@ function App() {
               <LogoText>SkillFuture.AI</LogoText>
             </LogoContainer>
 
-            <FormHeader>{isLogin ? "System Login" : "Initialize Account"}</FormHeader>
+            <FormHeader>{isLogin ? "Login for Upscaling..." : "Create Account"}</FormHeader>
             <FormSubtext>
               {isLogin
-                ? "Authenticate to resume your enterprise training modules."
-                : "Bridge the gap between theory and industry reality."}
+                ? "Let's Start Upscaling..."
+                : "Let's Get You Set Up..."}
             </FormSubtext>
 
             <ErrorBanner show={!!errorMsg}>{errorMsg}</ErrorBanner>
@@ -452,7 +466,7 @@ function App() {
             <FormGroup>
               <Label>
                 Password
-                {isLogin && <span style={{ color: '#10B981', cursor: 'pointer', fontSize: '0.75rem' }}>Reset</span>}
+                {isLogin && <span style={{ color: '#10B981', cursor: 'pointer', fontSize: '0.75rem' }}></span>}
               </Label>
               <Input
                 type="password"
@@ -464,7 +478,7 @@ function App() {
             </FormGroup>
 
             <PrimaryButton onClick={handleSubmit} disabled={loading}>
-              {loading ? "Connecting..." : isLogin ? "Authenticate" : "Deploy Environment"}
+              {loading ? "Connecting..." : isLogin ? "Let's Go" : "Sign Up"}
               {!loading && (
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -474,7 +488,7 @@ function App() {
             </PrimaryButton>
 
             <ToggleText>
-              {isLogin ? "Unregistered?" : "System active?"}
+              {isLogin ? "Unregistered?" : "Already have Account?"}
               <span onClick={() => { setIsLogin(!isLogin); setErrorMsg(""); }}>
                 {isLogin ? "Create account" : "Log in"}
               </span>
@@ -488,24 +502,24 @@ function App() {
               <div className="dot red"></div>
               <div className="dot yellow"></div>
               <div className="dot green"></div>
-              <div className="title">skillfuture-ai-engine ~ root</div>
+              <div className="title">SkillFuture.AI Platform</div>
             </TerminalHeader>
             <TerminalBody>
-              <LogLine delay={0.5}>[SYSTEM] Analyzing candidate profile matrix...</LogLine>
-              <LogLine delay={1.5}>[AUTH] GitHub connected. <span className="highlight">Status: Valid</span></LogLine>
-              <LogLine delay={2.5}>[AI_ENGINE] Evaluating backend proficiency...</LogLine>
+              <LogLine delay={0.5}>[SYSTEM] Analyzing...</LogLine>
+              <LogLine delay={1.5}>[AUTH] System connected. <span className="highlight">Status: Valid</span></LogLine>
+              <LogLine delay={2.5}>[AI_ENGINE] Evaluating Information...</LogLine>
               <LogLine delay={4.0}>[ASSIGNMENT] Formulating real-world application.</LogLine>
               <LogLine delay={5.0} style={{ marginTop: '16px' }}>
-                <span className="warn">► TARGET DOMAIN:</span> Industrial Safety & Compliance
+                <span className="warn">► TARGET DOMAIN:</span> Computer Science
               </LogLine>
               <LogLine delay={6.0}>
-                <span className="warn">► SCENARIO:</span> Build a <span className="string">"Smart Visitor Pre-Authorization System"</span>.
+                <span className="warn">► SCENARIO:</span> Build a <span className="string">"Smart AI System"</span>.
               </LogLine>
               <LogLine delay={7.5}>
-                <span className="warn">► REQUIREMENT:</span> Develop robust API endpoints to manage security protocols and compliance checks.
+                <span className="warn">► REQUIREMENT:</span> Develop robust Web App for Upscaling...
               </LogLine>
               <LogLine delay={9.0} style={{ marginTop: '16px', color: '#10B981' }}>
-                Ready to deploy sandbox environment.<Cursor />
+                Ready to Learn...<Cursor />
               </LogLine>
             </TerminalBody>
           </TerminalWindow>
